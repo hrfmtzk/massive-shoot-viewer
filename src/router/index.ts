@@ -1,5 +1,9 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router";
-import Home from "../views/Home.vue";
+import Home from "@/views/Home.vue";
+import Login from "@/views/Login.vue";
+import LoginCallback from "@/views/LoginCallback.vue";
+import store from "@/store";
+import { AuthAction } from "@/store/modules/auth";
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -15,12 +19,43 @@ const routes: Array<RouteRecordRaw> = [
     // which is lazy-loaded when the route is visited.
     component: () =>
       import(/* webpackChunkName: "about" */ "../views/About.vue"),
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: "/login",
+    name: "Login",
+    component: Login,
+  },
+  {
+    path: "/login/callback",
+    name: "LoginCallback",
+    component: LoginCallback,
   },
 ];
 
 const router = createRouter({
   history: createWebHistory(process.env.BASE_URL),
   routes,
+});
+
+router.beforeEach((to, from, next) => {
+  if (to.matched.some((record) => record.meta.requiresAuth)) {
+    if (!store.getters["auth/loggedIn"]) {
+      const redirectLogin = async () => {
+        window.location.href = await store.dispatch(
+          "auth/" + AuthAction.GENERATE_LOGIN_URL,
+          to.fullPath
+        );
+      };
+      redirectLogin();
+    } else {
+      next();
+    }
+  } else {
+    next();
+  }
 });
 
 export default router;
