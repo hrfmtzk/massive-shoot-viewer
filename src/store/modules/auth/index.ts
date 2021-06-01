@@ -17,6 +17,7 @@ export type AuthState = {
 };
 
 export enum AuthMutation {
+  GENERATE_AUTHZ_INFO = "GENERATE_AUTHZ_INFO",
   SET_TOKENS = "SET_TOKENS",
   SET_PROFILE = "SET_PROFILE",
   SET_AUTHZ_INFO = "SET_AUTHZ_INFO",
@@ -25,7 +26,6 @@ export enum AuthMutation {
 }
 
 export enum AuthAction {
-  GENERATE_LOGIN_URL = "GENERATE_LOGIN_URL",
   COMPLETE_LOGIN_PROCESS = "COMPLETE_LOGINPROCESS",
   REVOKE_TOKEN = "REVOKE_TOKEN",
 }
@@ -71,6 +71,12 @@ export const authModule: Module<AuthState, RootState> = {
     authzCodeVerifier: "",
   }),
   getters: {
+    stateReady: (state) => {
+      return (
+        (state.accessToken && state.refreshToken && state.userId) ||
+        (state.authzState && state.authzNonce && state.authzCodeVerifier)
+      );
+    },
     loggedIn: (state) => {
       return state.accessToken !== "";
     },
@@ -79,8 +85,39 @@ export const authModule: Module<AuthState, RootState> = {
     pictureUrl: (state) => state.pictureUrl,
     pictureUrlSmall: (state) => state.pictureUrl + "/small",
     pictureUrlLarge: (state) => state.pictureUrl + "/large",
+    getLoginUrl: (state) => (redirectUrl?: string) => {
+      const authzState = JSON.stringify({
+        state: state.authzState,
+        redirectUrl: redirectUrl || "/",
+      });
+      const url = new URL(process.env.VUE_APP_LINE_LOGIN_AUTHZ_URL);
+      url.searchParams.append("response_type", "code");
+      url.searchParams.append(
+        "client_id",
+        process.env.VUE_APP_LINE_LOGIN_CHANNEL_ID
+      );
+      url.searchParams.append(
+        "redirect_uri",
+        process.env.VUE_APP_LINE_LOGIN_REDIRECT_URL
+      );
+      url.searchParams.append("state", authzState);
+      url.searchParams.append("scope", "profile");
+      url.searchParams.append("nonce", state.authzNonce);
+      url.searchParams.append("bot_prompt", "aggressive");
+      url.searchParams.append(
+        "code_challenge",
+        convertCodeChallenge(state.authzCodeVerifier)
+      );
+      url.searchParams.append("code_challenge_method", "S256");
+      return url.href;
+    },
   },
   mutations: {
+    [AuthMutation.GENERATE_AUTHZ_INFO](state: AuthState) {
+      state.authzState = randomString(16);
+      state.authzNonce = randomString(16);
+      state.authzCodeVerifier = randomString(43);
+    },
     [AuthMutation.SET_TOKENS](state: AuthState, payload: SetTokensType) {
       if (payload.accessToken) {
         state.accessToken = payload.accessToken;
@@ -116,43 +153,6 @@ export const authModule: Module<AuthState, RootState> = {
     },
   },
   actions: {
-    [AuthAction.GENERATE_LOGIN_URL]({ commit }, redirectUrl: string) {
-      commit(AuthMutation.CLEAR_ALL_INFO);
-
-      const authzStateObject: authzStateObjectType = {
-        state: randomString(16),
-        redirectUrl: redirectUrl,
-      };
-      const authzState = JSON.stringify(authzStateObject);
-      const authzNonce = randomString(16);
-      const authzCodeVerifier = randomString(43);
-      commit(AuthMutation.SET_AUTHZ_INFO, {
-        authzState,
-        authzNonce,
-        authzCodeVerifier,
-      });
-
-      const url = new URL(process.env.VUE_APP_LINE_LOGIN_AUTHZ_URL);
-      url.searchParams.append("response_type", "code");
-      url.searchParams.append(
-        "client_id",
-        process.env.VUE_APP_LINE_LOGIN_CHANNEL_ID
-      );
-      url.searchParams.append(
-        "redirect_uri",
-        process.env.VUE_APP_LINE_LOGIN_REDIRECT_URL
-      );
-      url.searchParams.append("state", authzState);
-      url.searchParams.append("scope", "profile");
-      url.searchParams.append("nonce", authzNonce);
-      url.searchParams.append("bot_prompt", "aggressive");
-      url.searchParams.append(
-        "code_challenge",
-        convertCodeChallenge(authzCodeVerifier)
-      );
-      url.searchParams.append("code_challenge_method", "S256");
-      return url.href;
-    },
     async [AuthAction.COMPLETE_LOGIN_PROCESS]({ commit, state }, code: string) {
       const tokenRequestParams = new URLSearchParams();
       tokenRequestParams.append("grant_type", "authorization_code");
@@ -223,6 +223,7 @@ export const authModule: Module<AuthState, RootState> = {
         return;
       }
       commit(AuthMutation.CLEAR_ALL_INFO);
+      commit(AuthMutation.GENERATE_AUTHZ_INFO);
     },
   },
 };

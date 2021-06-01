@@ -3,7 +3,7 @@ import Home from "@/views/Home.vue";
 import Login from "@/views/Login.vue";
 import LoginCallback from "@/views/LoginCallback.vue";
 import store from "@/store";
-import { AuthAction } from "@/store/modules/auth";
+import { AuthMutation } from "@/store/modules/auth";
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -24,11 +24,6 @@ const routes: Array<RouteRecordRaw> = [
     },
   },
   {
-    path: "/login",
-    name: "Login",
-    component: Login,
-  },
-  {
     path: "/login/callback",
     name: "LoginCallback",
     component: LoginCallback,
@@ -41,15 +36,13 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from, next) => {
+  if (!store.getters["auth/stateReady"]) {
+    store.commit("auth/" + AuthMutation.GENERATE_AUTHZ_INFO);
+  }
   if (to.matched.some((record) => record.meta.requiresAuth)) {
     if (!store.getters["auth/loggedIn"]) {
-      const redirectLogin = async () => {
-        window.location.href = await store.dispatch(
-          "auth/" + AuthAction.GENERATE_LOGIN_URL,
-          to.fullPath
-        );
-      };
-      redirectLogin();
+      const loginUrl = store.getters["auth/getLoginUrl"](to.fullPath);
+      window.location.href = loginUrl;
     } else {
       next();
     }

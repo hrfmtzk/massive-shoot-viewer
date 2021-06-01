@@ -1,8 +1,14 @@
 <template>
-  <div v-if="state.errorCode">
-    {{ state.errorMessage }} ({{ state.errorCode }})
+  <div class="d-flex justify-content-center">
+    <div v-if="state.errorCode">
+      {{ state.errorMessage }} ({{ state.errorCode }})
+    </div>
+    <div v-else>
+      <div class="spinner-border text-secondary" role="status">
+        <span class="visually-hidden">Redirecting...</span>
+      </div>
+    </div>
   </div>
-  <div v-else>redirecting...</div>
 </template>
 
 <script lang="ts">
@@ -39,29 +45,28 @@ export default defineComponent({
     }
 
     let authzCode = "";
-    let authzState = "";
+    let authzStateObject: authzStateObjectType;
     try {
       authzCode = queryToStringStrict(route.query.code);
-      authzState = queryToStringStrict(route.query.state);
+      authzStateObject = JSON.parse(queryToStringStrict(route.query.state));
     } catch {
       state.errorCode = "0";
       state.errorMessage = "Invalid query.";
       return { state };
     }
 
-    if (authzState !== store.state.auth.authzState) {
+    if (authzStateObject.state !== store.state.auth.authzState) {
       state.errorCode = "0";
       state.errorMessage = "Invalid state.";
       return { state };
     }
 
     async function getToken() {
-      const stateObject: authzStateObjectType = JSON.parse(authzState);
       await store.dispatch(
         "auth/" + AuthAction.COMPLETE_LOGIN_PROCESS,
         authzCode
       );
-      router.push(stateObject.redirectUrl);
+      router.push(authzStateObject.redirectUrl);
     }
 
     getToken();
