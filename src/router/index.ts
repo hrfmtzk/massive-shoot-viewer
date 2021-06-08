@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router";
 import Home from "@/views/Home.vue";
-import Login from "@/views/Login.vue";
+import PhotoList from "@/views/PhotoList.vue";
 import LoginCallback from "@/views/LoginCallback.vue";
 import store from "@/store";
 import { AuthMutation } from "@/store/modules/auth";
@@ -19,6 +19,14 @@ const routes: Array<RouteRecordRaw> = [
     // which is lazy-loaded when the route is visited.
     component: () =>
       import(/* webpackChunkName: "about" */ "../views/About.vue"),
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: "/photos",
+    name: "Photos",
+    component: PhotoList,
     meta: {
       requiresAuth: true,
     },

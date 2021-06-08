@@ -80,6 +80,7 @@ export const authModule: Module<AuthState, RootState> = {
     loggedIn: (state) => {
       return state.accessToken !== "";
     },
+    accessToken: (state) => state.accessToken,
     userId: (state) => state.userId,
     displayName: (state) => state.displayName,
     pictureUrl: (state) => state.pictureUrl,

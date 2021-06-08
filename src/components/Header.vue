@@ -103,7 +103,7 @@ export default defineComponent({
   name: "Header",
   data() {
     return {
-      menuRoutePaths: ["/", "/about"],
+      menuRoutePaths: ["/", "/about", "/photos"],
     };
   },
   computed: {
