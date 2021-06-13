@@ -1,5 +1,8 @@
 <template>
-  <img :src="state.objectUrl" />
+  <img
+    :src="state.objectUrl"
+    :style="state.loading ? { display: 'none' } : {}"
+  />
 </template>
 
 <script lang="ts">
@@ -8,6 +11,7 @@ import axios from "axios";
 
 type State = {
   objectUrl: string;
+  loading: boolean;
 };
 
 export default defineComponent({
@@ -25,6 +29,7 @@ export default defineComponent({
   setup(props) {
     const state = reactive<State>({
       objectUrl: "",
+      loading: true,
     });
 
     onUnmounted(() => {
@@ -44,6 +49,7 @@ export default defineComponent({
 
         const data = new Blob([response.data]);
         state.objectUrl = URL.createObjectURL(data);
+        state.loading = false;
       } catch {
         return;
       }

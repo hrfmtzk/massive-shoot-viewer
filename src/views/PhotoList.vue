@@ -1,10 +1,31 @@
 <template>
   <div class="container">
-    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4">
-      <div class="col" v-for="(image, index) in state.images" :key="index">
-        <AuthImage :imageUrl="image.url" :token="token" />
+    <template v-if="state.loading">
+      <div class="spinner-border text-secondary" role="status">
+        <span class="visually-hidden">Loading...</span>
       </div>
-    </div>
+    </template>
+    <template v-else>
+      <template v-if="state.error">
+        {{ error }}
+      </template>
+      <template v-else>
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4">
+          <div
+            class="col gx-0"
+            v-for="(image, index) in state.images"
+            :key="index"
+          >
+            <AuthImage
+              :imageUrl="image.url + '?thumbnail=true'"
+              :token="token"
+              class="img-fluid img-thumbnail"
+              style="object-fit: cover; width: 100%; height: 250px"
+            />
+          </div>
+        </div>
+      </template>
+    </template>
   </div>
 </template>
 
@@ -30,6 +51,8 @@ type ImageItem = {
 
 type State = {
   images: Array<ImageItem>;
+  loading: boolean;
+  error: string;
 };
 
 export default defineComponent({
@@ -40,6 +63,8 @@ export default defineComponent({
   setup() {
     const state = reactive<State>({
       images: [],
+      loading: true,
+      error: "",
     });
     const store = useStore();
 
@@ -57,7 +82,10 @@ export default defineComponent({
           timestamp: new Date(image.timestamp),
           userId: image.user_id,
         }));
+        state.loading = false;
       } catch {
+        state.loading = false;
+        state.error = "image list load error";
         return;
       }
     }
